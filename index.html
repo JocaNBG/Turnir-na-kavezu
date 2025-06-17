@@ -6,7 +6,15 @@
   <title>Turnir na kavezu</title>
   <link rel="manifest" href="manifest.json">
   <link rel="icon" href="icon-192.png">
+  <link rel="apple-touch-icon" href="icon-192.png">
   <meta name="theme-color" content="#000000">
+  <script>
+    if ("serviceWorker" in navigator) {
+      window.addEventListener("load", () => {
+        navigator.serviceWorker.register("service-worker.js");
+      });
+    }
+  </script>
   <style>
     body { font-family: sans-serif; padding: 10px; margin: 0; background: #f5f5f5; }
     h1, h2 { text-align: center; }
@@ -20,36 +28,6 @@
   </style>
 </head>
 <body>
-
-<!--
-==============================
-📘 UPUTSTVO ZA ADMINA - TURNIR NA KAVEZU
-==============================
-
-🔐 Pristup admin funkcijama:
-1. Unesi lozinku: kavez45
-2. Klikni na "Prijavi se kao admin"
-3. Pojaviće se sve opcije za uređivanje
-
-🛠 Funkcije za admina:
-- ✅ Dodaj tim: Unesi ime i 3 igrača (odvojena zarezima)
-- 🗑 Obriši tim: Klikni na 🗑 ikonicu pored tima
-- 📅 Zakazivanje:
-   - Automatski: "Automatski zakazuj sve"
-   - Ručno: Izaberi timove, datum, vreme, lokaciju → klik na "Dodaj ručno"
-- 📝 Unos rezultata:
-   - Klikni "Unesi rezultat" pored utakmice
-   - Upisuješ golove i biraš strelce po broju golova
-- 📈 Pregled tabele i top strelaca se osvežava automatski
-- 🔁 Export: "Kopiraj podatke" → možeš ih podeliti drugima
-- 🔄 Reset: Briše sve timove, utakmice i rezultate
-- 🚪 "Izađi iz admin moda" zaključava uređivanje
-
-🧠 Svi podaci se čuvaju lokalno (na telefonu gde je aplikacija otvorena).
-Za deljenje sa drugim uređajima koristi opciju "Kopiraj podatke" i "Import".
-
--->
-
 <div id="adminBanner">ADMIN MOD AKTIVAN</div>
 <h1>Turnir na kavezu</h1>
 
@@ -69,38 +47,31 @@ Za deljenje sa drugim uređajima koristi opciju "Kopiraj podatke" i "Import".
   <ul id="teamList"></ul>
 
   <div class="section admin-only">
-    <h2>Zakazivanje utakmica</h2>
-    <button onclick="generateSchedule()">Automatski zakazuj sve</button>
-    <select id="manualTeamA"></select>
-    <select id="manualTeamB"></select>
-    <input type="date" id="manualDate">
-    <input type="time" id="manualTime">
-    <input type="text" id="manualLocation" placeholder="Lokacija">
-    <button onclick="addManualMatch()">Dodaj ručno</button>
-  </div>
-
-  <div class="section admin-only">
-    <h2>Unos rezultata utakmica</h2>
-    <div id="resultInputs"></div>
+    <h2>Unos rezultata</h2>
+    <select id="teamA"></select>
+    <input type="number" id="scoreA" placeholder="Golovi tima A">
+    <select id="teamB"></select>
+    <input type="number" id="scoreB" placeholder="Golovi tima B">
+    <button onclick="addResult()">Unesi rezultat</button>
   </div>
 
   <div class="section">
     <h2>Rang lista</h2>
+    <button onclick="updateTable()">Osveži tabelu</button>
     <table id="rankingTable">
       <thead>
         <tr><th>Tim</th><th>Utakmice</th><th>P</th><th>N</th><th>I</th><th>Gol razlika</th><th>Poeni</th></tr>
       </thead>
       <tbody></tbody>
     </table>
-  </div>
-
+  
   <div class="section">
     <h2>Lista utakmica</h2>
-    <table id="matchesTable">
+    <table>
       <thead>
         <tr><th>#</th><th>Tim A</th><th>Tim B</th><th>Datum</th><th>Vreme</th><th>Lokacija</th><th>Rezultat</th></tr>
       </thead>
-      <tbody></tbody>
+      <tbody id="matchesTableBody"></tbody>
     </table>
   </div>
 
@@ -109,66 +80,181 @@ Za deljenje sa drugim uređajima koristi opciju "Kopiraj podatke" i "Import".
     <ul id="scorersList"></ul>
   </div>
 
-  <div class="section admin-only">
-    <button onclick="logout()">🚪 Izađi iz admin moda</button>
-    <button onclick="resetAll()">Resetuj sve</button>
-    <button onclick="copyData()">📋 Kopiraj podatke</button>
-  </div>
+</div>
 </div>
 
-<!-- Skripta ide ovde (generišemo u sledećem koraku) -->
 <script>
-// 👇 JavaScript logika je ovde ubačena
-
 let admin = false;
-
 function checkAdmin() {
-  const pass = document.getElementById("adminPassword").value.trim();
+  const pass = document.getElementById("adminPassword").value;
   if (pass === "kavez45") {
     admin = true;
     document.getElementById("adminLogin").style.display = "none";
     document.querySelectorAll(".admin-only").forEach(e => e.style.display = "block");
     document.getElementById("adminBanner").style.display = "block";
-    renderAll();
+    saveData();
   } else {
     alert("Pogrešna lozinka!");
   }
 }
 
-function logout() {
-  admin = false;
-  location.reload();
+let teams = JSON.parse(localStorage.getItem("turnir_teams") || "[]");
+let results = JSON.parse(localStorage.getItem("turnir_results") || "[]");
+
+function saveData() {
+  localStorage.setItem("turnir_teams", JSON.stringify(teams));
+  localStorage.setItem("turnir_results", JSON.stringify(results));
 }
 
-function resetAll() {
-  if (confirm("Da li sigurno želiš da obrišeš sve podatke?")) {
-    localStorage.removeItem("turnir_teams");
-    localStorage.removeItem("turnir_matches");
-    localStorage.removeItem("turnir_scorers");
-    location.reload();
+function renderTeamList() {
+  const ul = document.getElementById('teamList');
+  if (!ul) return;
+  ul.innerHTML = '';
+  teams.forEach((team, i) => {
+    const li = document.createElement('li');
+    li.textContent = `${i + 1}. ${team.name} (${team.players.join(', ')})`;
+    ul.appendChild(li);
+  });
+  updateDropdowns();
+  updateTable(); // automatski osvežavanje tabele
+}
+
+function updateDropdowns() {
+  const dropdowns = [teamA, teamB];
+  dropdowns.forEach(select => {
+    if (!select) return;
+    select.innerHTML = '';
+    teams.forEach(team => {
+      const option = document.createElement('option');
+      option.value = team.name;
+      option.textContent = team.name;
+      select.appendChild(option);
+    });
+  });
+}
+
+function addTeam() {
+  const name = document.getElementById("teamName").value.trim();
+  const players = document.getElementById("players").value.split(/,|
+/).map(p => p.trim()).filter(p => p);
+  if (name && players.length === 3) {
+    teams.push({ name, players });
+    saveData();
+    document.getElementById("teamName").value = '';
+    document.getElementById("players").value = '';
+    renderTeamList();
+  } else {
+    alert("Unesite ime tima i 3 igrača!");
   }
 }
 
-function copyData() {
-  const data = {
-    teams: JSON.parse(localStorage.getItem("turnir_teams") || "[]"),
-    matches: JSON.parse(localStorage.getItem("turnir_matches") || "[]"),
-    scorers: JSON.parse(localStorage.getItem("turnir_scorers") || "{}")
-  };
-  const txt = JSON.stringify(data, null, 2);
-  navigator.clipboard.writeText(txt);
-  alert("Podaci su kopirani u klipbord!");
+function updateTable() {
+  const tbody = document.querySelector('#rankingTable tbody');
+  if (!tbody) return;
+  if (teams.length === 0) {
+    tbody.innerHTML = '<tr><td colspan="7">⚠ Nema unetih timova.</td></tr>';
+    return;
+  }
+
+  let table = {};
+  teams.forEach(t => {
+    table[t.name] = { team: t.name, played: 0, win: 0, draw: 0, loss: 0, gd: 0, pts: 0 };
+  });
+  results.forEach(r => {
+    const tA = table[r.teamA], tB = table[r.teamB];
+    tA.played++; tB.played++;
+    tA.gd += r.scoreA - r.scoreB;
+    tB.gd += r.scoreB - r.scoreA;
+    if (r.scoreA > r.scoreB) { tA.win++; tB.loss++; tA.pts += 3; }
+    else if (r.scoreA < r.scoreB) { tB.win++; tA.loss++; tB.pts += 3; }
+    else { tA.draw++; tB.draw++; tA.pts++; tB.pts++; }
+  });
+  tbody.innerHTML = '';
+  Object.values(table).sort((a,b) => b.pts - a.pts || b.gd - a.gd).forEach(row => {
+    tbody.innerHTML += `<tr><td>${row.team}</td><td>${row.played}</td><td>${row.win}</td><td>${row.draw}</td><td>${row.loss}</td><td>${row.gd}</td><td>${row.pts}</td></tr>`;
+  });
 }
 
+window.onload = () => {
+  renderTeamList(); updateTable();
+};
 
- - checkAdmin()
- - logout()
- - addTeam(), deleteTeam()
- - generateSchedule(), addManualMatch()
- - enterResult() sa strelcima
- - renderAll()
- itd.
-*/
+
+// Dodavanje zakazivanja mečeva
+let matches = JSON.parse(localStorage.getItem("turnir_matches") || "[]");
+let scorers = JSON.parse(localStorage.getItem("turnir_scorers") || "{}");
+
+function generateSchedule() {
+  if (teams.length < 2) return alert("Potrebna su bar 2 tima.");
+  matches = [];
+  for (let i = 0; i < teams.length; i++) {
+    for (let j = i + 1; j < teams.length; j++) {
+      matches.push({
+        teamA: teams[i].name,
+        teamB: teams[j].name,
+        date: "",
+        time: "",
+        location: "",
+        scoreA: null,
+        scoreB: null
+      });
+    }
+  }
+  saveData();
+  renderMatches();
+}
+
+function renderMatches() {
+  const table = document.getElementById("matchesTableBody");
+  if (!table) return;
+  table.innerHTML = "";
+  matches.forEach((m, i) => {
+    const tr = document.createElement("tr");
+    tr.innerHTML = `
+      <td>${i + 1}</td>
+      <td>${m.teamA}</td>
+      <td>${m.teamB}</td>
+      <td>${m.date || "-"}</td>
+      <td>${m.time || "-"}</td>
+      <td>${m.location || "-"}</td>
+      <td>${m.scoreA != null ? m.scoreA + " : " + m.scoreB : "-"}</td>
+    `;
+    table.appendChild(tr);
+  });
+}
+
+// Dodavanje top strelaca
+function renderScorers() {
+  const ul = document.getElementById("scorersList");
+  if (!ul) return;
+  ul.innerHTML = "";
+  const sorted = Object.entries(scorers).sort((a,b) => b[1] - a[1]);
+  sorted.forEach(([name, goals]) => {
+    const li = document.createElement("li");
+    li.textContent = `${name} – ${goals} gol${goals === 1 ? "" : "a"}`;
+    ul.appendChild(li);
+  });
+}
+
+// Nadogradnja saveData da uključuje sve
+const originalSaveData = saveData;
+saveData = function() {
+  localStorage.setItem("turnir_teams", JSON.stringify(teams));
+  localStorage.setItem("turnir_results", JSON.stringify(results));
+  localStorage.setItem("turnir_matches", JSON.stringify(matches));
+  localStorage.setItem("turnir_scorers", JSON.stringify(scorers));
+  if (typeof originalSaveData === "function") originalSaveData();
+};
+
+// Poziv render funkcija pri učitavanju
+const originalOnload = window.onload;
+window.onload = function() {
+  if (typeof originalOnload === "function") originalOnload();
+  renderMatches();
+  renderScorers();
+};
+
+
 </script>
 </body>
 </html>
