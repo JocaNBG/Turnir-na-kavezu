@@ -97,6 +97,10 @@ function renderTeamList() {
   ul.innerHTML = '';
   teams.forEach((team, i) => {
     const li = document.createElement('li');
+    li.innerHTML = `${i + 1}. ${team.name} (${team.players.join(', ')}) <button onclick="deleteTeam(${i})">🗑</button>`;
+    ul.appendChild(li);
+  });
+    const li = document.createElement('li');
     li.textContent = `${i + 1}. ${team.name} (${team.players.join(', ')})`;
     ul.appendChild(li);
   });
@@ -129,6 +133,14 @@ function addTeam() {
     renderTeamList();
   } else {
     alert("Unesite ime tima i 3 igrača!");
+  }
+}
+
+function deleteTeam(index) {
+  if (confirm("Da li sigurno želiš da obrišeš tim?")) {
+    teams.splice(index, 1);
+    saveData();
+    renderTeamList();
   }
 }
 
