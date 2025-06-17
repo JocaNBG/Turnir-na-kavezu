@@ -25,7 +25,12 @@
 
 <div id="adminBanner">ADMIN MOD AKTIVAN</div>
 <h1>Turnir na kavezu</h1>
-
+<!-- ✅ Import JSON sekcija za korisnike -->
+<div class="section">
+  <h2>📅 Učitaj podatke (JSON)</h2>
+  <textarea id="importTextarea" rows="5" placeholder="Nalepi JSON podatke ovde..."></textarea>
+  <button onclick="importData()">Učitaj podatke</button>
+</div>
 <div id="adminLogin" class="section">
   <h2>Admin pristup</h2>
   <input type="password" id="adminPassword" placeholder="Unesi lozinku">
@@ -87,7 +92,6 @@
     <button onclick="resetAll()">🗑 Resetuj sve</button>
     <button onclick="copyData()">📋 Kopiraj podatke</button>
   </div>
-</div>
 
 <script>
 let admin = false;
@@ -131,7 +135,7 @@ function addTeam() {
   document.getElementById("teamName").value = '';
   document.getElementById("players").value = '';
   renderTeamList();
-  updateDropdowns(); // ✅ OVO dodaj ako nije već tu
+  updateDropdowns();
 }
 
 function deleteTeam(idx) {
@@ -285,6 +289,23 @@ function renderAll() {
   renderMatches();
   renderScorers();
   updateDropdowns();
+}
+
+// ✅ Import funkcija
+function importData() {
+  try {
+    const text = document.getElementById("importTextarea").value;
+    const data = JSON.parse(text);
+    if (!data.teams || !data.matches || !data.scorers) throw "Format nije ispravan";
+    teams = data.teams;
+    matches = data.matches;
+    scorers = data.scorers;
+    saveData();
+    renderAll();
+    alert("Podaci su uspešno učitani!");
+  } catch (e) {
+    alert("Greška prilikom uvoza podataka. Proveri JSON.");
+  }
 }
 
 window.onload = renderAll;
