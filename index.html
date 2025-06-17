@@ -4,9 +4,14 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>Turnir na kavezu</title>
+
+  <!-- PWA podrška -->
   <link rel="manifest" href="manifest.json">
   <link rel="icon" href="icon-192.png">
+  <link rel="apple-touch-icon" href="icon-192.png"> <!-- iOS ikonica -->
   <meta name="theme-color" content="#000000">
+
+  <!-- Service Worker -->
   <script>
     if ("serviceWorker" in navigator) {
       window.addEventListener("load", () => {
@@ -14,6 +19,8 @@
       });
     }
   </script>
+
+  <!-- Stilovi -->
   <style>
     body { font-family: sans-serif; padding: 10px; margin: 0; background-color: #f5f5f5; }
     h1, h2 { text-align: center; }
@@ -26,6 +33,7 @@
     .team-entry button { width: auto; margin-left: 10px; padding: 5px 10px; }
   </style>
 </head>
+
 <body>
 <h1>Turnir na kavezu</h1>
 
