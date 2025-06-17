@@ -33,12 +33,6 @@
   <button onclick="importData()">Učitaj podatke</button>
 </div>
 
-<div id="adminLogin" class="section">
-  <h2>Admin pristup</h2>
-  <input type="password" id="adminPassword" placeholder="Unesi lozinku">
-  <button onclick="checkAdmin()">Prijavi se kao admin</button>
-</div>
-
 <div id="mainApp">
   <div class="section admin-only">
     <h2>Unos timova</h2>
@@ -97,6 +91,12 @@
     <button onclick="copyData()">📋 Kopiraj podatke</button>
   </div>
 
+  <div id="adminLogin" class="section">
+  <h2>Admin pristup</h2>
+  <input type="password" id="adminPassword" placeholder="Unesi lozinku">
+  <button onclick="checkAdmin()">Prijavi se kao admin</button>
+</div>
+  
 <script>
 let admin = false;
 function checkAdmin() {
