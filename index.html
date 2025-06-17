@@ -1,5 +1,4 @@
 
-<!-- SAMO SCRIPT deo koji se menja (ostatak index.html ostaje isti) -->
 <script>
 let admin = false;
 function checkAdmin() {
@@ -31,6 +30,7 @@ function saveData() {
 
 function renderTeamList() {
   const ul = document.getElementById('teamList');
+  if (!ul) return;
   ul.innerHTML = '';
   teams.forEach((team, i) => {
     const li = document.createElement('li');
@@ -38,11 +38,13 @@ function renderTeamList() {
     ul.appendChild(li);
   });
   updateDropdowns();
+  updateTable(); // automatski osvežavanje tabele
 }
 
 function updateDropdowns() {
   const dropdowns = [teamA, teamB, manualTeamA, manualTeamB];
   dropdowns.forEach(select => {
+    if (!select) return;
     select.innerHTML = '';
     teams.forEach(team => {
       const option = document.createElement('option');
@@ -62,27 +64,19 @@ function addTeam() {
     document.getElementById("teamName").value = '';
     document.getElementById("players").value = '';
     renderTeamList();
-    updateTable();
   } else {
     alert("Unesite ime tima i 3 igrača!");
   }
 }
 
-function addResult() {
-  const a = document.getElementById("teamA").value;
-  const b = document.getElementById("teamB").value;
-  const sa = parseInt(document.getElementById("scoreA").value);
-  const sb = parseInt(document.getElementById("scoreB").value);
-  if (!a || !b || a === b || isNaN(sa) || isNaN(sb)) return alert("Unesite validne podatke.");
-  results.push({ teamA: a, teamB: b, scoreA: sa, scoreB: sb });
-  document.getElementById("scoreA").value = '';
-  document.getElementById("scoreB").value = '';
-  saveData();
-  updateTable();
-  renderMatches();
-}
-
 function updateTable() {
+  const tbody = document.querySelector('#rankingTable tbody');
+  if (!tbody) return;
+  if (teams.length === 0) {
+    tbody.innerHTML = '<tr><td colspan="7">⚠ Nema unetih timova.</td></tr>';
+    return;
+  }
+
   let table = {};
   teams.forEach(t => {
     table[t.name] = { team: t.name, played: 0, win: 0, draw: 0, loss: 0, gd: 0, pts: 0 };
@@ -96,77 +90,13 @@ function updateTable() {
     else if (r.scoreA < r.scoreB) { tB.win++; tA.loss++; tB.pts += 3; }
     else { tA.draw++; tB.draw++; tA.pts++; tB.pts++; }
   });
-  const tbody = document.querySelector('#rankingTable tbody');
   tbody.innerHTML = '';
   Object.values(table).sort((a,b) => b.pts - a.pts || b.gd - a.gd).forEach(row => {
     tbody.innerHTML += `<tr><td>${row.team}</td><td>${row.played}</td><td>${row.win}</td><td>${row.draw}</td><td>${row.loss}</td><td>${row.gd}</td><td>${row.pts}</td></tr>`;
   });
 }
 
-function copyData() {
-  navigator.clipboard.writeText(JSON.stringify({teams, results, matches}, null, 2)).then(() => alert("Kopirano!"));
-}
-
-function importData() {
-  try {
-    const d = JSON.parse(document.getElementById("importData").value);
-    teams = d.teams || []; results = d.results || []; matches = d.matches || [];
-    saveData();
-    renderTeamList(); updateTable(); renderMatches();
-  } catch {
-    alert("Nevalidni podaci");
-  }
-}
-
-function resetAll() {
-  if (confirm("Obrisati sve?")) {
-    teams = []; results = []; matches = [];
-    localStorage.clear();
-    renderTeamList(); updateTable(); renderMatches();
-  }
-}
-
-function generateSchedule() {
-  matches = [];
-  for (let i = 0; i < teams.length; i++) {
-    for (let j = i + 1; j < teams.length; j++) {
-      matches.push({ teamA: teams[i].name, teamB: teams[j].name, date: "", time: "", location: "" });
-    }
-  }
-  saveData();
-  renderMatches();
-}
-
-function addManualMatch() {
-  const a = manualTeamA.value, b = manualTeamB.value;
-  const d = manualDate.value, t = manualTime.value, l = manualLocation.value;
-  if (a === b) return alert("Izaberi različite timove!");
-  matches.push({ teamA: a, teamB: b, date: d, time: t, location: l });
-  saveData();
-  renderMatches();
-}
-
-function renderMatches() {
-  const tbody = document.querySelector("#matchesTable tbody");
-  tbody.innerHTML = '';
-  matches.forEach((m, i) => {
-    const rez = results.find(r => r.teamA === m.teamA && r.teamB === m.teamB);
-    const rtext = rez ? `${rez.scoreA}:${rez.scoreB}` : (admin ? `<button onclick="enterResult(${i})">Unesi</button>` : '-');
-    tbody.innerHTML += `<tr><td>${i+1}</td><td>${m.teamA}</td><td>${m.teamB}</td><td>${m.date || '-'}</td><td>${m.time || '-'}</td><td>${m.location || '-'}</td><td>${rtext}</td></tr>`;
-  });
-}
-
-function enterResult(i) {
-  const a = prompt(`Golovi za ${matches[i].teamA}:`);
-  const b = prompt(`Golovi za ${matches[i].teamB}:`);
-  if (a !== null && b !== null) {
-    results.push({ teamA: matches[i].teamA, teamB: matches[i].teamB, scoreA: parseInt(a), scoreB: parseInt(b) });
-    saveData();
-    renderMatches(); updateTable();
-  }
-}
-
 window.onload = () => {
-  renderTeamList(); updateTable(); renderMatches();
+  renderTeamList(); updateTable();
 };
 </script>
