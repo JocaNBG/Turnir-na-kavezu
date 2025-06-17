@@ -119,7 +119,47 @@ Za deljenje sa drugim uređajima koristi opciju "Kopiraj podatke" i "Import".
 <!-- Skripta ide ovde (generišemo u sledećem koraku) -->
 <script>
 // 👇 JavaScript logika je ovde ubačena
-// (ceo JS se ubacuje automatski ovde)
+
+let admin = false;
+
+function checkAdmin() {
+  const pass = document.getElementById("adminPassword").value.trim();
+  if (pass === "kavez45") {
+    admin = true;
+    document.getElementById("adminLogin").style.display = "none";
+    document.querySelectorAll(".admin-only").forEach(e => e.style.display = "block");
+    document.getElementById("adminBanner").style.display = "block";
+    renderAll();
+  } else {
+    alert("Pogrešna lozinka!");
+  }
+}
+
+function logout() {
+  admin = false;
+  location.reload();
+}
+
+function resetAll() {
+  if (confirm("Da li sigurno želiš da obrišeš sve podatke?")) {
+    localStorage.removeItem("turnir_teams");
+    localStorage.removeItem("turnir_matches");
+    localStorage.removeItem("turnir_scorers");
+    location.reload();
+  }
+}
+
+function copyData() {
+  const data = {
+    teams: JSON.parse(localStorage.getItem("turnir_teams") || "[]"),
+    matches: JSON.parse(localStorage.getItem("turnir_matches") || "[]"),
+    scorers: JSON.parse(localStorage.getItem("turnir_scorers") || "{}")
+  };
+  const txt = JSON.stringify(data, null, 2);
+  navigator.clipboard.writeText(txt);
+  alert("Podaci su kopirani u klipbord!");
+}
+
 
  - checkAdmin()
  - logout()
